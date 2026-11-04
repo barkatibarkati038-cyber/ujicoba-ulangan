@@ -1,541 +1,509 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CBT Ujian - Fikih</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- React & ReactDOM -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <!-- Babel -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <style>
-        /* Anti-Cheat CSS */
-        body {
-            user-select: none;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-        }
-        .hide-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .hide-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CBT Ujian - Bahasa Arab Kelas VIII</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- React & ReactDOM -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  
+  <!-- Babel -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <style>
+    /* Anti-Cheat: Mencegah seleksi teks dan klik kanan */
+    body {
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      background: linear-gradient(135deg, #06b6d4, #3b82f6);
+      min-height: 100vh;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    /* Izinkan seleksi teks hanya pada input form dan textarea */
+    input, textarea, select {
+      user-select: text;
+      -webkit-user-select: text;
+    }
+    
+    /* Font khusus Bahasa Arab agar lebih terbaca */
+    @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap');
+    .font-arabic {
+      font-family: 'Amiri', serif;
+    }
+  </style>
 </head>
-<body class="bg-gradient-to-br from-cyan-600 to-blue-900 min-h-screen font-sans text-slate-800" oncontextmenu="return false;">
-    <div id="root"></div>
+<body oncontextmenu="return false;">
+  <div id="root"></div>
 
-    <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+  <script type="text/babel">
+    const { useState, useEffect, useCallback, useRef } = React;
 
-        // ==========================================
-        // KONFIGURASI UJIAN
-        // ==========================================
-        const GOOGLE_SHEETS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz_4PlRBN03kigqoEiztltmkLNr7Yd6w8EQQpEaaBlLlmMNCjhKkUYvXQ1F7H_mx2o-ow/exec"; // GANTI DENGAN URL WEB APP GAS ANDA
-        const EXAM_CONFIG = {
-            mapel: "Fikih",
-            jenis: "SUMATIF AKHIR JENJANG (SAJ) 2025/2026",
-            kelas: "VIII",
-            durasiMenit: 90,
-            storageKey: "cbt_fikih_VIII"
+    // ==========================================
+    // KONFIGURASI UJIAN
+    // ==========================================
+    const CONFIG = {
+      mapel: "BAHASA ARAB",
+      jenisUjian: "SUMATIF AKHIR JENJANG (SAJ) 2025/2026",
+      kelas: "VIII",
+      durasiMenit: 90,
+      storageKey: "cbt_BAHASA_ARAB_VIII",
+      googleSheetsUrl: "https://script.google.com/macros/s/AKfycbz_4PlRBN03kigqoEiztltmkLNr7Yd6w8EQQpEaaBlLlmMNCjhKkUYvXQ1F7H_mx2o-ow/exec" // <-- GANTI DENGAN URL WEB APP GOOGLE SCRIPT ANDA
+    };
+
+    // ==========================================
+    // DATA SOAL (Dari Ekstraksi PDF Bahasa Arab)
+    // ==========================================
+    const rawQuestionsData = [
+      { id: 1, type: 'mc', text: 'مَا اللُّغَةُ الْعَرَبِيَّةُ لِكَلِمَةِ "Kunci"?', options: ['مِفْتَاحٌ', 'بَابٌ', 'نَافِذَةٌ', 'كُرْسِيُّ'], answer: 'مِفْتَاحٌ' },
+      { id: 2, type: 'mc', text: 'مَا اللُّغَةُ الْعَرَبِيَّةُ لِكَلِمَةِ "Jendela"?', options: ['مِفْتَاحٌ', 'نَافِذَةٌ', 'سَبُّورَةٌ', 'جَرَسٌ'], answer: 'نَافِذَةٌ' },
+      { id: 3, type: 'mc', text: 'مَا مَعْنَى كَلِمَةٍ «سَبُّورَةٌ»؟', options: ['Meja', 'Papan tulis', 'Penghapus', 'Lemari'], answer: 'Papan tulis' },
+      { id: 4, type: 'mc', text: 'مَا اللُّغَةُ الْعَرَبِيَّةُ لِكَلِمَةِ "Bel / Lonceng"؟', options: ['مِصْبَاحٌ', 'مِفْتَاحٌ', 'جَرَسٌ', 'كُرْسِيُّ'], answer: 'جَرَسٌ' },
+      { id: 5, type: 'mc', text: 'مَا مَعْنَى كَلِمَةٍ «مِصْبَاحٌ»؟', options: ['Lampu', 'Kipas angin', 'Jam', 'Pintu'], answer: 'Lampu' },
+      { id: 6, type: 'mc', text: 'مَا اللُّغَةُ الْعَرَبِيَّةُ لِكَلِمَةِ "Kursi"?', options: ['مَكْتَبٌ', 'بَابٌ', 'رَفٌ', 'كُرْسِيُّ'], answer: 'كُرْسِيُّ' },
+      { id: 7, type: 'mc', text: 'مَا اللُّغَةُ الْعَرَبِيَّةُ لِكَلِمَةِ "Kapur tulis"؟', options: ['طَبْشُورَةٌ', 'مِسْطَرَةٌ', 'مِمْحَاةٌ', 'كُرَّاسَةٌ'], answer: 'طَبْشُورَةٌ' },
+      { id: 8, type: 'mc', text: 'مَا مَعْنَى كَلِمَةٍ «مُكَيِّف»؟', options: ['Kipas angin', 'Pendingin ruangan (AC)', 'Televisi', 'Lampu'], answer: 'Pendingin ruangan (AC)' },
+      { id: 9, type: 'mc', text: 'إخْتَرِ الْعِبَارَةَ الصَّحِيحَة لـ "Tembok merah"!', options: ['جِدَارٌ حَمْرَاءُ', 'جِدَارٌ أَحْمَرُ', 'جِدَارٌ صَفْرَاءُ', 'جِدَارٌ أَصْفَرُ'], answer: 'جِدَارٌ أَحْمَرُ' },
+      { id: 10, type: 'mc', text: 'إخْتَرِ الْعِبَارَةَ الصَّحِيحَةَ لـ "Jendela biru"!', options: ['نَافِذَةٌ أَزْرَقُ', 'نَافِذَةٌ أَحْمَرُ', 'نَافِذَةٌ زَرْقَاءُ', 'نَافِذَةٌ حَمْرَاءُ'], answer: 'نَافِذَةٌ زَرْقَاءُ' },
+      { id: 11, type: 'mc', text: 'مَا هُوَ الْمُؤَنَّث مِنْ كَلِمَةٍ «أَخْضَرُ»؟', options: ['خَضْرَاءُ', 'أَخْضَرُ', 'صَفْرَاءُ', 'حَمْرَاءُ'], answer: 'خَضْرَاءُ' },
+      { id: 12, type: 'mc', text: 'مَا هُوَ الْمُذَكَّرُ مِنْ كَلِمَةِ «سَوْدَاءُ»؟', options: ['سَوْدَاءُ', 'أَصْفَرُ', 'أَسْوَدُ', 'أَزْرَقُ'], answer: 'أَسْوَدُ' },
+      { id: 13, type: 'mc', text: 'إخْتَرِ التَّرْجَمَةَ الصَّحِيحَةَ لِـ "Papan tulis putih"!', options: ['سَبُّورَةٌ أَبْيَضُ', 'سَبُّورَةٌ بَيْضَاءُ', 'سَبُّورَةٌ سَوْدَاءُ', 'سَبُّورَةٌ أَسْوَدُ'], answer: 'سَبُّورَةٌ بَيْضَاءُ' },
+      { id: 14, type: 'mc', text: 'مَا مَعْنَى الْجُمْلَةِ «لَوْنُ الْكِتَابِ أَصْفَرُ»؟', options: ['Warna pintu itu kuning', 'Warna buku itu kuning', 'Warna jam itu merah', 'Warna buku itu merah'], answer: 'Warna buku itu kuning' },
+      { id: 15, type: 'mc', text: 'إِمْلَا الْفَرَاغَ بِالضَّمِيرِ الْمُنَاسِب: «الْكِتَابُ لَوْنُ [...] أَزْرَقُ»', options: ['ـهَا', 'ـكَ', 'ـهُ', 'ـي'], answer: 'ـهُ' },
+      { id: 16, type: 'mc', text: 'إِمْلَا الْفَرَاغَ بِالضَّمِيرِ الْمُنَاسِب: «السَّاعَةُ لَوْنُ [...] أَسْوَدُ»', options: ['ـهُ', 'ـهَا', 'ـكَ', 'ـنَا'], answer: 'ـهَا' },
+      { id: 17, type: 'mc', text: 'تَرْجِمْ إِلَى اللُّغَةِ الْعَرَبِيَّةِ : "Dia (laki-laki) mempunyai pena"!', options: ['عِنْدِي قَلَمٌ', 'عِنْدَهَا قَلَمٌ', 'عِنْدَهُ قَلَمٌ', 'عِنْدَكِ قَلَمٌ'], answer: 'عِنْدَهُ قَلَمٌ' },
+      { id: 18, type: 'mc', text: 'تَرْجِمْ إِلَى اللُّغَةِ الْعَرَبِيَّةِ: "Kami mempunyai kelas"!', options: ['عِنْدَنَا فَصْلٌ', 'عِنْدِي فَصْلٌ', 'عِنْدَهُ فَصْلٌ', 'عِنْدَكَ فَصْلٌ'], answer: 'عِنْدَنَا فَصْلٌ' },
+      { id: 19, type: 'mc', text: 'تَرْجِمْ إِلَى اللُّغَةِ الْعَرَبِيَّةِ : "Kamu (perempuan) mempunyai buku"!', options: ['عِنْدَكَ كِتَابٌ', 'عِنْدَكِ كِتَابٌ', 'عِنْدِي كِتَابٌ', 'عِنْدَهَا كِتَابٌ'], answer: 'عِنْدَكِ كِتَابٌ' },
+      { id: 20, type: 'mc', text: 'تَرْجِمْ إِلَى اللُّغَةِ الْعَرَبِيَّةِ : "Saya mempunyai penghapus"!', options: ['عِنْدَهُ طَلَّاسَةٌ', 'عِنْدَهَا طَلَّاسَةٌ', 'عِنْدَكَ طَلَّاسَةٌ', 'عِنْدِي طَلَّاسَةٌ'], answer: 'عِنْدِي طَلَّاسَةٌ' },
+      { 
+        id: 21, 
+        type: 'matching', 
+        text: 'Jodohkanlah pertanyaan pada Kolom A dengan jawaban yang tepat pada Kolom B! (وَفِّقْ بَيْنَ الْأَسْئِلَةِ وَالْإِجَابَةِ الصَّحِيحَةِ)', 
+        pairs: [
+          { id: 'p1', premise: 'مَا اللُّغَةُ الْعَرَبِيَّةُ لِكَلِمَةِ "Pintu"?', answer: 'بَابٌ' },
+          { id: 'p2', premise: 'مَا اللُّغَةُ الْعَرَبِيَّةُ لِكَلِمَةِ "Rak"?', answer: 'رَفٌ' },
+          { id: 'p3', premise: 'مَا اللُّغَةُ الْعَرَبِيَّةُ لِكَلِمَةِ "Proyektor"?', answer: 'بَرُوجِكْتُر' },
+          { id: 'p4', premise: 'مَا مَعْنَى كَلِمَةٍ أَبْيَضُ فِي مِفْتَاحٌ أَبْيَضُ؟', answer: 'Putih' },
+          { id: 'p5', premise: 'مَا مَعْنَى كَلِمَةٍ سَوْدَاءُ فِي سَاعَةٌ سَوْدَاءُ؟', answer: 'Hitam' },
+          { id: 'p6', premise: 'إِمْلَا الْفَرَاغَ لـ "Jendela kuning" : نَافِذَةٌ [...]', answer: 'صَفْرَاءُ' },
+          { id: 'p7', premise: 'إِمْلَا الْفَرَاغُ "Warna buku kuning" : [...] لَوْنُ الْكِتَابِ', answer: 'أَصْفَرُ' },
+          { id: 'p8', premise: 'الضَّمِيرُ الْمُنَاسِبُ "Buku itu warnanya merah" : الْكِتَابُ لَوْنُ [...] أَحْمَرُ', answer: 'ـهُ' },
+          { id: 'p9', premise: 'الضَّمِيرُ الْمُنَاسِبُ "Jam itu warnanya hitam" : السَّاعَةُ لَوْنُ [...] أَسْوَدُ', answer: 'ـهَا' },
+          { id: 'p10', premise: 'الْكَلِمَةُ الْمُنَاسِبَةُ لِـ "Saya mempunyai buku" : [...] كِتَابٌ', answer: 'عِنْدِي' }
+        ],
+        options: ['بَابٌ', 'رَفٌ', 'بَرُوجِكْتُر', 'Putih', 'Hitam', 'صَفْرَاءُ', 'أَصْفَرُ', 'ـهُ', 'ـهَا', 'عِنْدِي']
+      }
+    ];
+
+    // ==========================================
+    // UTILITAS & PENANGANAN RTL (ARAB)
+    // ==========================================
+    const shuffleArray = (array) => {
+      let arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    };
+
+    const generateShuffledQuestions = () => {
+      let shuffled = shuffleArray(rawQuestionsData);
+      return shuffled.map(q => {
+        if (q.type === 'mc') return { ...q, options: shuffleArray(q.options) };
+        if (q.type === 'matching') return { ...q, options: shuffleArray(q.options) };
+        return q;
+      });
+    };
+
+    const isArabic = (text) => /[\u0600-\u06FF]/.test(text);
+
+    const FormattedText = ({ text }) => {
+      if (isArabic(text)) {
+        return <div dir="rtl" className="text-right text-2xl font-bold font-arabic leading-loose text-gray-800">{text}</div>;
+      }
+      return <div className="text-left text-lg text-gray-800 leading-relaxed whitespace-pre-wrap">{text}</div>;
+    };
+
+    const FormattedOption = ({ text }) => {
+      if (isArabic(text)) {
+        return <span dir="rtl" className="text-right text-xl font-bold font-arabic block w-full">{text}</span>;
+      }
+      return <span>{text}</span>;
+    };
+
+    // ==========================================
+    // KOMPONEN IKON & MODAL (Anti-Crash)
+    // ==========================================
+    const IconAlert = () => (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-red-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+      </svg>
+    );
+
+    const CustomModal = ({ isOpen, type, title, message, onConfirm, confirmText, onCancel, cancelText }) => {
+      if (!isOpen) return null;
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-11/12 max-w-md text-center">
+            {type === 'alert' && <IconAlert />}
+            <h3 className="text-xl font-bold mt-4 text-gray-800">{title}</h3>
+            <p className="text-gray-600 mt-2">{message}</p>
+            <div className="mt-6 flex justify-center gap-4">
+              {onCancel && (
+                <button onClick={onCancel} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300">
+                  {cancelText || 'Batal'}
+                </button>
+              )}
+              <button onClick={onConfirm} className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700">
+                {confirmText || 'OK'}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // ==========================================
+    // APLIKASI UTAMA
+    // ==========================================
+    const App = () => {
+      const [sessionChecked, setSessionChecked] = useState(false);
+      const [hasSavedSession, setHasSavedSession] = useState(false);
+      
+      const [isLoggedIn, setIsLoggedIn] = useState(false);
+      const [isFinished, setIsFinished] = useState(false);
+      
+      const [studentData, setStudentData] = useState({ nama: '', kelas: '', tanggal: new Date().toISOString().split('T')[0] });
+      const [questions, setQuestions] = useState([]);
+      const [answers, setAnswers] = useState({});
+      const [currentIndex, setCurrentIndex] = useState(0);
+      const [timeLeft, setTimeLeft] = useState(CONFIG.durasiMenit * 60);
+      const [violations, setViolations] = useState(0);
+      
+      const [modalState, setModalState] = useState({ isOpen: false });
+      const [isSubmitting, setIsSubmitting] = useState(false);
+      const [finalResult, setFinalResult] = useState(null);
+
+      // Cek Session LocalStorage
+      useEffect(() => {
+        const saved = localStorage.getItem(CONFIG.storageKey);
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            if (!parsed.isFinished && parsed.questions && parsed.timeLeft > 0) setHasSavedSession(true);
+            else localStorage.removeItem(CONFIG.storageKey);
+          } catch(e) { localStorage.removeItem(CONFIG.storageKey); }
+        }
+        setSessionChecked(true);
+      }, []);
+
+      // Auto-Save
+      useEffect(() => {
+        if (isLoggedIn && !isFinished) {
+          localStorage.setItem(CONFIG.storageKey, JSON.stringify({ studentData, questions, answers, currentIndex, timeLeft, violations, isFinished }));
+        }
+      }, [isLoggedIn, isFinished, studentData, questions, answers, currentIndex, timeLeft, violations]);
+
+      // Timer
+      useEffect(() => {
+        if (!isLoggedIn || isFinished) return;
+        const timerId = setInterval(() => {
+          setTimeLeft(prev => {
+            if (prev <= 1) {
+              clearInterval(timerId);
+              handleAutoSubmit("WAKTU_HABIS");
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+        return () => clearInterval(timerId);
+      }, [isLoggedIn, isFinished]);
+
+      // Strict Anti-Cheat
+      useEffect(() => {
+        if (!isLoggedIn || isFinished) return;
+        const handleCheat = () => {
+          if (modalState.isOpen && modalState.type === 'alert') return;
+          setViolations(v => {
+            const nv = v + 1;
+            if (nv === 1) showModal('alert', 'PERINGATAN!', 'Dilarang keluar dari layar ujian atau berpindah tab!', () => setModalState({isOpen: false}));
+            else if (nv >= 2) handleAutoSubmit("PELANGGARAN_KECURANGAN");
+            return nv;
+          });
+        };
+        const onVis = () => { if (document.hidden) handleCheat(); };
+        const onFs = () => { if (!document.fullscreenElement) handleCheat(); };
+        document.addEventListener('visibilitychange', onVis);
+        document.addEventListener('fullscreenchange', onFs);
+        return () => { document.removeEventListener('visibilitychange', onVis); document.removeEventListener('fullscreenchange', onFs); };
+      }, [isLoggedIn, isFinished, modalState.isOpen]);
+
+      const formatTime = (s) => `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
+      const showModal = (type, title, msg, onConfirm, onCancel, btnConfirm) => setModalState({ isOpen: true, type, title, message: msg, onConfirm, onCancel, confirmText: btnConfirm });
+
+      const enterExam = () => {
+        document.documentElement.requestFullscreen().catch(() => {});
+        setIsLoggedIn(true);
+      };
+
+      const handleStartNew = (e) => {
+        e.preventDefault();
+        setQuestions(generateShuffledQuestions());
+        enterExam();
+      };
+
+      const handleResume = () => {
+        const d = JSON.parse(localStorage.getItem(CONFIG.storageKey));
+        setStudentData(d.studentData); setQuestions(d.questions); setAnswers(d.answers);
+        setCurrentIndex(d.currentIndex); setTimeLeft(d.timeLeft); setViolations(d.violations);
+        enterExam();
+      };
+
+      // Handle Jawaban
+      const handleSelectOption = (qId, option) => setAnswers(prev => ({ ...prev, [qId]: option }));
+      const handleInputText = (qId, text) => setAnswers(prev => ({ ...prev, [qId]: text }));
+      const handleMatchingSelect = (qId, pairId, value) => {
+        setAnswers(prev => ({ ...prev, [qId]: { ...(prev[qId] || {}), [pairId]: value } }));
+      };
+
+      // Kumpulkan Jawaban
+      const reqSubmit = () => showModal('confirm', 'Kumpulkan?', 'Kirim lembar ujian sekarang?', 
+        () => { setModalState({isOpen: false}); handleAutoSubmit("SELESAI_NORMAL"); },
+        () => setModalState({isOpen: false}), 'Kumpulkan'
+      );
+
+      const handleAutoSubmit = async (ket) => {
+        setIsFinished(true); setIsSubmitting(true);
+        if (document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+
+        let pgBenar = 0;
+        let totalBobotPG = 0; 
+        let rincianArr = [];
+        let esaiArr = [];
+        
+        const sortedOriginal = [...rawQuestionsData].sort((a,b) => a.id - b.id);
+        
+        sortedOriginal.forEach(q => {
+          const uAns = answers[q.id];
+          
+          if (q.type === 'mc' || q.type === 'short_answer') {
+            totalBobotPG++;
+            if (!uAns) rincianArr.push(`Soal ${q.id}: KOSONG`);
+            else if (uAns === q.answer) { pgBenar++; rincianArr.push(`Soal ${q.id}: BENAR`); }
+            else rincianArr.push(`Soal ${q.id}: SALAH (Pilih: ${uAns}, Kunci: ${q.answer})`);
+          } 
+          else if (q.type === 'matching') {
+            let matchDetails = [];
+            q.pairs.forEach(pair => {
+              totalBobotPG++;
+              const pAns = uAns ? uAns[pair.id] : null;
+              if (!pAns) matchDetails.push(`[${pair.premise} = KOSONG]`);
+              else if (pAns === pair.answer) { pgBenar++; matchDetails.push(`[${pair.premise} = ${pAns} (BENAR)]`); }
+              else matchDetails.push(`[${pair.premise} = ${pAns} (SALAH, Kunci: ${pair.answer})]`);
+            });
+            rincianArr.push(`Soal ${q.id} (Menjodohkan): ${matchDetails.join(" | ")}`);
+          }
+          else if (q.type === 'essay') {
+            if (!uAns || !uAns.trim()) {
+              esaiArr.push(`Soal ${q.id}: [KOSONG]`); rincianArr.push(`Soal ${q.id}: KOSONG`);
+            } else {
+              const safeText = uAns.trim().replace(/\n/g, '\\n');
+              esaiArr.push(`Soal ${q.id}: ${safeText}`); rincianArr.push(`Soal ${q.id} (Esai): ${safeText}`);
+            }
+          }
+        });
+
+        const nilaiOtomatis = totalBobotPG > 0 ? (pgBenar / totalBobotPG) * 100 : 0;
+        
+        const payload = {
+          waktuSubmit: new Date().toLocaleString('id-ID'),
+          nama: studentData.nama, kelas: studentData.kelas, tanggal: studentData.tanggal,
+          skor: nilaiOtomatis.toFixed(2), esai: esaiArr.join("\n\n"),
+          pelanggaran: violations, keterangan: ket, rincian: rincianArr.join(" | ")
         };
 
-        // ==========================================
-        // DATA SOAL (Diekstrak dari PDF)
-        // ==========================================
-        const rawQuestionsData = [
-            { id: 1, type: 'mc', question: "Shalat jamak adalah shalat yang dikerjakan dengan cara...", options: [{ text: "Digabung waktunya", isCorrect: true }, { text: "Dikurangi rakaatnya", isCorrect: false }, { text: "Ditambah rakaatnya", isCorrect: false }, { text: "Dikerjakan berjamaah", isCorrect: false }] },
-            { id: 2, type: 'mc', question: "Shalat qashar adalah shalat yang dikerjakan dengan cara...", options: [{ text: "Mengulang shalat", isCorrect: false }, { text: "Meringkas rakaat", isCorrect: true }, { text: "Mengakhirkan shalat", isCorrect: false }, { text: "Menambah bacaan", isCorrect: false }] },
-            { id: 3, type: 'mc', question: "Jamak taqdim dilakukan pada...", options: [{ text: "Waktu shalat pertama", isCorrect: true }, { text: "Waktu malam saja", isCorrect: false }, { text: "Waktu shalat kedua", isCorrect: false }, { text: "Waktu subuh saja", isCorrect: false }] },
-            { id: 4, type: 'mc', question: "Jamak ta'khir dilakukan pada...", options: [{ text: "Waktu shalat pertama", isCorrect: false }, { text: "Sebelum masuk waktu", isCorrect: false }, { text: "Waktu shalat kedua", isCorrect: true }, { text: "Setelah subuh", isCorrect: false }] },
-            { id: 5, type: 'mc', question: "Shalat yang boleh dijamak adalah...", options: [{ text: "Subuh dan Zuhur", isCorrect: false }, { text: "Ashar dan Maghrib", isCorrect: false }, { text: "Zuhur dan Ashar", isCorrect: true }, { text: "Subuh dan Isya", isCorrect: false }] },
-            { id: 6, type: 'mc', question: "Pasangan shalat yang boleh dijamak adalah...", options: [{ text: "Maghrib dan Isya", isCorrect: true }, { text: "Ashar dan Isya", isCorrect: false }, { text: "Subuh dan Zuhur", isCorrect: false }, { text: "Subuh dan Ashar", isCorrect: false }] },
-            { id: 7, type: 'mc', question: "Shalat yang boleh diqashar adalah shalat yang berjumlah...", options: [{ text: "2 rakaat", isCorrect: false }, { text: "4 rakaat", isCorrect: true }, { text: "3 rakaat", isCorrect: false }, { text: "5 rakaat", isCorrect: false }] },
-            { id: 8, type: 'mc', question: "Shalat yang tidak boleh diqashar adalah...", options: [{ text: "Zuhur", isCorrect: false }, { text: "Isya", isCorrect: false }, { text: "Ashar", isCorrect: false }, { text: "Maghrib", isCorrect: true }] },
-            { id: 9, type: 'mc', question: "Jumlah rakaat shalat Zuhur ketika diqashar menjadi...", options: [{ text: "1 rakaat", isCorrect: false }, { text: "3 rakaat", isCorrect: false }, { text: "2 rakaat", isCorrect: true }, { text: "4 rakaat", isCorrect: false }] },
-            { id: 10, type: 'mc', question: "Salah satu syarat umum shalat jamak dan qashar adalah...", options: [{ text: "Sedang musafir", isCorrect: true }, { text: "Sedang di rumah", isCorrect: false }, { text: "Sedang sakit ringan", isCorrect: false }, { text: "Sedang bermain", isCorrect: false }] },
-            { id: 11, type: 'mc', question: "Perjalanan yang membolehkan jamak dan qashar sebaiknya bukan untuk...", options: [{ text: "Mencari ilmu", isCorrect: false }, { text: "Kemaksiatan", isCorrect: true }, { text: "Silaturahmi", isCorrect: false }, { text: "Berdagang halal", isCorrect: false }] },
-            { id: 12, type: 'mc', question: "Urutan jamak taqdim Zuhur dan Ashar yang benar adalah...", options: [{ text: "Ashar lalu Zuhur", isCorrect: false }, { text: "Subuh lalu Zuhur", isCorrect: false }, { text: "Zuhur lalu Ashar", isCorrect: true }, { text: "Maghrib lalu Ashar", isCorrect: false }] },
-            { id: 13, type: 'mc', question: "Niat jamak taqdim dilakukan saat...", options: [{ text: "Shalat pertama", isCorrect: true }, { text: "Sebelum tidur", isCorrect: false }, { text: "Setelah salam kedua", isCorrect: false }, { text: "Setelah pulang", isCorrect: false }] },
-            { id: 14, type: 'mc', question: "Contoh pelaksanaan jamak ta'khir adalah...", options: [{ text: "Zuhur dan Ashar di waktu Ashar", isCorrect: true }, { text: "Maghrib dan Isya di waktu Maghrib", isCorrect: false }, { text: "Zuhur dan Ashar di waktu Zuhur", isCorrect: false }, { text: "Subuh dan Zuhur di waktu Subuh", isCorrect: false }] },
-            { id: 15, type: 'mc', question: "Shalat jenazah hukumnya...", options: [{ text: "Fardu ain", isCorrect: false }, { text: "Sunah biasa", isCorrect: false }, { text: "Fardu kifayah", isCorrect: true }, { text: "Mubah", isCorrect: false }] },
-            { id: 16, type: 'mc', question: "Shalat jenazah dilakukan tanpa...", options: [{ text: "Niat", isCorrect: false }, { text: "Takbir", isCorrect: false }, { text: "Rukuk dan sujud", isCorrect: true }, { text: "Salam", isCorrect: false }] },
-            { id: 17, type: 'mc', question: "Jumlah takbir dalam shalat jenazah adalah...", options: [{ text: "2 takbir", isCorrect: false }, { text: "3 takbir", isCorrect: false }, { text: "4 takbir", isCorrect: true }, { text: "5 takbir", isCorrect: false }] },
-            { id: 18, type: 'mc', question: "Bacaan setelah takbir pertama dalam shalat jenazah adalah...", options: [{ text: "Al-Fatihah", isCorrect: true }, { text: "Tahiyat", isCorrect: false }, { text: "Doa qunut", isCorrect: false }, { text: "Adzan", isCorrect: false }] },
-            { id: 19, type: 'mc', question: "Bacaan setelah takbir kedua dalam shalat jenazah adalah...", options: [{ text: "Shalawat", isCorrect: true }, { text: "Sujud tilawah", isCorrect: false }, { text: "Iqamah", isCorrect: false }, { text: "Tasyahud akhir", isCorrect: false }] },
-            { id: 20, type: 'mc', question: "Seorang musafir menempuh perjalanan jauh dari pagi hingga sore. Ia belum shalat Zuhur dan tiba saat waktu Ashar. Cara yang tepat adalah...", options: [{ text: "Jamak ta'khir Zuhur dan Ashar", isCorrect: true }, { text: "Qashar Subuh dan Maghrib", isCorrect: false }, { text: "Jamak taqdim Zuhur dan Ashar", isCorrect: false }, { text: "Mengganti dengan shalat jenazah", isCorrect: false }] },
-            { id: 21, type: 'essay', question: "Jelaskan pengertian shalat jamak dan shalat qashar secara singkat.", answer: "jamak menggabungkan, qashar meringkas" },
-            { id: 22, type: 'essay', question: "Sebutkan shalat apa saja yang boleh dijamak dan shalat apa saja yang boleh diqashar.", answer: "jamak: zuhur, ashar, maghrib, isya. qashar: zuhur, ashar, isya" },
-            { id: 23, type: 'essay', question: "Jelaskan perbedaan jamak taqdim dan jamak ta'khir.", answer: "taqdim waktu pertama, ta'khir waktu kedua" },
-            { id: 24, type: 'essay', question: "Sebutkan rukun utama shalat jenazah secara berurutan.", answer: "niat, takbir, al-fatihah, shalawat, doa, salam" },
-            { id: 25, type: 'essay', question: "Seorang musafir berangkat sebelum Zuhur dan diperkirakan baru berhenti saat waktu Ashar. Ia ingin melaksanakan shalat Zuhur dan Ashar ketika berhenti. Jelaskan jenis shalat yang tepat dan cara pelaksanaannya secara singkat.", answer: "jamak ta'khir" }
-        ];
+        try {
+          await fetch(CONFIG.googleSheetsUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload) });
+          setFinalResult({ ...payload }); localStorage.removeItem(CONFIG.storageKey);
+        } catch (e) {
+          alert("Koneksi gagal. Jawaban tersimpan di memori perangkat.");
+          setFinalResult({ ...payload, error: true });
+        }
+        setIsSubmitting(false);
+      };
 
-        // ==========================================
-        // KOMPONEN IKON SVG (React Anti-Crash)
-        // ==========================================
-        const IconUser = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
-        const IconCheck = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
-        const IconAlert = () => <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500 mb-4 mx-auto"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>;
-        const IconClock = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
+      if (!sessionChecked) return null;
 
-        // ==========================================
-        // KOMPONEN MODAL CUSTOM
-        // ==========================================
-        const CustomModal = ({ isOpen, title, message, type = "alert", onConfirm, onCancel, confirmText = "OK" }) => {
-            if (!isOpen) return null;
-            return (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-md">
-                    <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 text-center transform transition-all">
-                        {type === "alert" && <IconAlert />}
-                        <h2 className="text-2xl font-bold text-gray-800 mb-2">{title}</h2>
-                        <p className="text-gray-600 mb-6">{message}</p>
-                        <div className="flex justify-center gap-3">
-                            {type === "confirm" && (
-                                <button onClick={onCancel} className="px-6 py-2 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition-colors">
-                                    Batal
-                                </button>
-                            )}
-                            <button onClick={onConfirm} className={`px-6 py-2 rounded-lg font-semibold text-white transition-colors shadow-md ${type === 'alert' ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'}`}>
-                                {confirmText}
-                            </button>
-                        </div>
-                    </div>
+      // =========================== UI LOGIN ===========================
+      if (!isLoggedIn) {
+        return (
+          <div className="min-h-screen flex items-center justify-center p-4">
+            <div className="bg-white/95 backdrop-blur-md rounded-xl shadow-2xl p-8 max-w-md w-full border-t-4 border-blue-500">
+              <h1 className="text-3xl font-extrabold text-center text-gray-800 mb-1">{CONFIG.mapel}</h1>
+              <h2 className="text-sm font-semibold text-center text-blue-600 mb-8 uppercase tracking-wide">{CONFIG.jenisUjian} - KELAS {CONFIG.kelas}</h2>
+              {hasSavedSession ? (
+                <div className="bg-yellow-50 border border-yellow-200 rounded p-5 text-center mb-6">
+                  <h3 className="font-bold text-yellow-700 mb-2">Sesi Tersimpan Ditemukan!</h3>
+                  <button onClick={handleResume} className="w-full bg-blue-600 text-white font-bold py-2 rounded hover:bg-blue-700 mb-2">Lanjutkan Ujian</button>
+                  <button onClick={() => { localStorage.removeItem(CONFIG.storageKey); setHasSavedSession(false); }} className="w-full bg-gray-200 text-gray-700 font-bold py-2 rounded hover:bg-gray-300">Mulai Ulang</button>
                 </div>
-            );
-        };
+              ) : (
+                <form onSubmit={handleStartNew} className="space-y-4">
+                  <div>
+                    <label className="block text-gray-700 font-bold mb-1">Nama Lengkap</label>
+                    <input required value={studentData.nama} onChange={e=>setStudentData({...studentData, nama:e.target.value.toUpperCase()})} className="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-gray-700 font-bold mb-1">Kelas</label>
+                    <input required value={studentData.kelas} onChange={e=>setStudentData({...studentData, kelas:e.target.value.toUpperCase()})} className="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none" />
+                  </div>
+                  <button className="w-full mt-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold py-3 rounded-lg hover:shadow-lg transition">Mulai Ujian</button>
+                </form>
+              )}
+            </div>
+          </div>
+        );
+      }
 
-        // ==========================================
-        // KOMPONEN UTAMA (APP)
-        // ==========================================
-        const App = () => {
-            const [view, setView] = useState("login"); // "login", "resume", "exam", "finished"
-            const [userData, setUserData] = useState({ nama: "", kelas: "", tanggal: new Date().toISOString().split('T')[0] });
-            const [questions, setQuestions] = useState([]);
-            const [answers, setAnswers] = useState({});
-            const [timeLeft, setTimeLeft] = useState(EXAM_CONFIG.durasiMenit * 60);
-            const [violations, setViolations] = useState(0);
-            const [activeIdx, setActiveIdx] = useState(0);
+      // =========================== UI HASIL ===========================
+      if (isFinished) {
+        return (
+          <div className="min-h-screen flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-2xl p-8 max-w-lg w-full text-center">
+              {isSubmitting ? (
+                <div><h2 className="text-2xl font-bold mb-4">Mengirim Data...</h2><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div></div>
+              ) : (
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-800 mb-2">Ujian Selesai!</h2>
+                  <div className="bg-gray-50 border rounded-lg p-4 text-left mb-6">
+                    <p><strong>Nama:</strong> {studentData.nama}</p>
+                    <p className="mt-2">Nilai Objektif (PG/Menjodohkan): <span className="font-bold text-blue-600 text-lg">{finalResult?.skor}</span></p>
+                  </div>
+                  <button onClick={() => window.location.reload()} className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg">Kembali</button>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      }
+
+      // =========================== UI UJIAN ===========================
+      const q = questions[currentIndex];
+      
+      return (
+        <div className="min-h-screen bg-gray-100 flex flex-col relative">
+          <CustomModal {...modalState} />
+
+          <header className="bg-white shadow-md px-6 py-4 flex justify-between items-center sticky top-0 z-40">
+            <div>
+              <h1 className="text-xl font-bold text-gray-800 uppercase">{CONFIG.mapel}</h1>
+              <p className="text-xs font-semibold text-gray-500">{studentData.nama} - {studentData.kelas}</p>
+            </div>
+            <div className={`font-mono text-xl font-bold px-4 py-1 rounded-lg ${timeLeft<300 ? 'bg-red-100 text-red-600 animate-pulse':'bg-blue-100 text-blue-800'}`}>
+              {formatTime(timeLeft)}
+            </div>
+          </header>
+
+          <div className="flex-1 max-w-7xl w-full mx-auto p-4 flex flex-col lg:flex-row gap-6">
             
-            const [modal, setModal] = useState({ isOpen: false, type: "alert", title: "", message: "", onConfirm: null, onCancel: null, confirmText: "OK" });
-            const isSubmitting = useRef(false);
+            <main className="flex-1 bg-white rounded-xl shadow-sm border p-6 flex flex-col">
+              <div className="flex justify-between border-b pb-3 mb-6">
+                <h2 className="text-lg font-bold text-gray-700">Soal Nomor {currentIndex + 1}</h2>
+                {q.type === 'matching' && <span className="bg-indigo-100 text-indigo-800 text-xs font-bold px-2 py-1 rounded">MENJODOHKAN</span>}
+              </div>
 
-            // Cek LocalStorage saat pertama mount
-            useEffect(() => {
-                const saved = localStorage.getItem(EXAM_CONFIG.storageKey);
-                if (saved) {
-                    setView("resume");
-                }
-            }, []);
+              <FormattedText text={q.text} />
 
-            // Strict Anti-Cheat: Mencegah Keyboard Shortcuts (Copy/Paste/Print)
-            useEffect(() => {
-                const blockKeys = (e) => {
-                    if (e.ctrlKey && ['c', 'v', 'u', 'p', 'x'].includes(e.key.toLowerCase())) e.preventDefault();
-                };
-                window.addEventListener("keydown", blockKeys);
-                window.addEventListener("copy", (e) => e.preventDefault());
-                window.addEventListener("paste", (e) => e.preventDefault());
-                return () => {
-                    window.removeEventListener("keydown", blockKeys);
-                    window.removeEventListener("copy", (e) => e.preventDefault());
-                    window.removeEventListener("paste", (e) => e.preventDefault());
-                }
-            }, []);
-
-            // Timer Countdown & LocalStorage Auto-Save 
-            useEffect(() => {
-                let timer;
-                if (view === "exam" && !isSubmitting.current) {
-                    timer = setInterval(() => {
-                        setTimeLeft((prev) => {
-                            if (prev <= 1) {
-                                clearInterval(timer);
-                                handleAutoSubmit("Waktu Habis");
-                                return 0;
-                            }
-                            return prev - 1;
-                        });
-                        saveToLocal(); // Auto-save real-time
-                    }, 1000);
-                }
-                return () => clearInterval(timer);
-            }, [view, answers, activeIdx, violations]);
-
-            // Deteksi Pindah Tab & Fullscreen
-            useEffect(() => {
-                if (view !== "exam") return;
-                
-                const handleVisibility = () => {
-                    if (document.hidden && !isSubmitting.current && !modal.isOpen) registerViolation();
-                };
-                const handleFullscreen = () => {
-                    if (!document.fullscreenElement && !isSubmitting.current && !modal.isOpen) registerViolation();
-                };
-
-                document.addEventListener("visibilitychange", handleVisibility);
-                document.addEventListener("fullscreenchange", handleFullscreen);
-                
-                return () => {
-                    document.removeEventListener("visibilitychange", handleVisibility);
-                    document.removeEventListener("fullscreenchange", handleFullscreen);
-                };
-            }, [view, violations, modal.isOpen]);
-
-            // Fungsi Algoritma Fisher-Yates untuk Acak Soal
-            const shuffleArray = (arr) => {
-                let array = [...arr];
-                for (let i = array.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [array[i], array[j]] = [array[j], array[i]];
-                }
-                return array;
-            };
-
-            const initializeQuestions = () => {
-                let processed = rawQuestionsData.map(q => {
-                    let newQ = { ...q };
-                    if (newQ.type === 'mc') {
-                        newQ.options = shuffleArray(newQ.options);
-                    }
-                    return newQ;
-                });
-                return shuffleArray(processed);
-            };
-
-            const saveToLocal = () => {
-                const data = { userData, questions, answers, timeLeft, violations, activeIdx };
-                localStorage.setItem(EXAM_CONFIG.storageKey, JSON.stringify(data));
-            };
-
-            const registerViolation = () => {
-                const newV = violations + 1;
-                setViolations(newV);
-                if (newV >= 2) {
-                    handleAutoSubmit("Kecurangan Terdeteksi (2x)");
-                } else {
-                    setModal({
-                        isOpen: true, type: "alert", title: "PERINGATAN KERAS!",
-                        message: "Anda terdeteksi keluar dari layar ujian atau berpindah tab. Pelanggaran berikutnya akan menghentikan ujian Anda secara otomatis!",
-                        confirmText: "Kembali ke Ujian",
-                        onConfirm: () => {
-                            setModal({ isOpen: false });
-                            enterFullscreen();
-                        }
-                    });
-                }
-            };
-
-            const enterFullscreen = () => {
-                if (document.documentElement.requestFullscreen) {
-                    document.documentElement.requestFullscreen().catch(() => console.log("Fullscreen blocked"));
-                }
-            };
-
-            const startExam = (isResume) => {
-                if (isResume) {
-                    const saved = JSON.parse(localStorage.getItem(EXAM_CONFIG.storageKey));
-                    setUserData(saved.userData);
-                    setQuestions(saved.questions);
-                    setAnswers(saved.answers);
-                    setTimeLeft(saved.timeLeft);
-                    setViolations(saved.violations);
-                    setActiveIdx(saved.activeIdx);
-                } else {
-                    setQuestions(initializeQuestions());
-                    setAnswers({});
-                    setTimeLeft(EXAM_CONFIG.durasiMenit * 60);
-                    setViolations(0);
-                    setActiveIdx(0);
-                }
-                setView("exam");
-                enterFullscreen();
-            };
-
-            const handleAutoSubmit = (keterangan) => {
-                if (isSubmitting.current) return;
-                isSubmitting.current = true;
-                setModal({ isOpen: true, type: "alert", title: "Ujian Dihentikan", message: keterangan + ". Sistem sedang memproses nilai Anda...", confirmText: "Harap Tunggu..." });
-                processSubmission(keterangan);
-            };
-
-            const manualSubmitConfirm = () => {
-                setModal({
-                    isOpen: true, type: "confirm", title: "Konfirmasi Selesai",
-                    message: "Apakah Anda yakin ingin mengumpulkan ujian? Tindakan ini tidak bisa dibatalkan.",
-                    confirmText: "Ya, Kumpulkan",
-                    onCancel: () => setModal({ isOpen: false }),
-                    onConfirm: () => {
-                        setModal({ isOpen: false });
-                        if (isSubmitting.current) return;
-                        isSubmitting.current = true;
-                        processSubmission("Selesai Normal");
-                    }
-                });
-            };
-
-            const processSubmission = async (keterangan) => {
-                let score = 0;
-                let rincianArr = [];
-                
-                // Urutkan rincian berdasar ID asli agar runtut (1 - 25)
-                const sortedOriginals = [...rawQuestionsData].sort((a,b) => a.id - b.id);
-                
-                sortedOriginals.forEach(orig => {
-                    const studentAns = answers[orig.id];
-                    let isCorrect = false;
-                    let txtDetail = "";
-
-                    if (!studentAns || studentAns.trim() === "") {
-                        txtDetail = `Soal ${orig.id}: KOSONG`;
-                    } else {
-                        if (orig.type === 'mc') {
-                            const correctOpt = orig.options.find(o => o.isCorrect).text;
-                            if (studentAns === correctOpt) {
-                                isCorrect = true;
-                                txtDetail = `Soal ${orig.id}: BENAR`;
-                            } else {
-                                txtDetail = `Soal ${orig.id}: SALAH (Pilih: ${studentAns}, Kunci: ${correctOpt})`;
-                            }
-                        } else if (orig.type === 'essay') {
-                            // Cek kata kunci dasar untuk esai agar memiliki nilai parsial
-                            const ansLower = studentAns.toLowerCase();
-                            const keys = orig.answer.split(', ');
-                            isCorrect = keys.some(k => ansLower.includes(k));
-                            
-                            if (isCorrect) {
-                                txtDetail = `Soal ${orig.id}: BENAR (Esai Jawaban: ${studentAns.substring(0,30)}...)`;
-                            } else {
-                                txtDetail = `Soal ${orig.id}: SALAH (Esai Jawaban: ${studentAns.substring(0,30)}..., Kunci: ${orig.answer})`;
-                            }
-                        }
-                    }
-                    
-                    if (isCorrect) score += (100 / rawQuestionsData.length); // Distribusi merata (4 poin/soal)
-                    rincianArr.push(txtDetail);
-                });
-
-                const finalScore = Math.round(score);
-                const rincianStr = rincianArr.join(" | ");
-
-                const payload = {
-                    nama: userData.nama,
-                    kelas: userData.kelas,
-                    tanggal: userData.tanggal,
-                    skor: finalScore,
-                    pelanggaran: violations,
-                    keterangan: keterangan,
-                    rincianJawaban: rincianStr
-                };
-
-                try {
-                    await fetch(GOOGLE_SHEETS_WEB_APP_URL, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        headers: { 'Content-Type': 'text/plain' },
-                        body: JSON.stringify(payload)
-                    });
-                } catch (err) {
-                    console.error("Gagal mengirim data ke server", err);
-                }
-
-                localStorage.removeItem(EXAM_CONFIG.storageKey);
-                if (document.fullscreenElement) document.exitFullscreen().catch(e => e);
-                
-                setModal({ isOpen: false });
-                setView("finished");
-            };
-
-            const formatTime = (secs) => {
-                const m = Math.floor(secs / 60).toString().padStart(2, '0');
-                const s = (secs % 60).toString().padStart(2, '0');
-                return `${m}:${s}`;
-            };
-
-            // ================== RENDER VIEWS ================== //
-            if (view === "login") {
-                return (
-                    <div className="flex items-center justify-center min-h-screen p-4">
-                        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden transform transition-all">
-                            <div className="bg-blue-800 p-6 text-white text-center">
-                                <h1 className="text-2xl font-bold uppercase tracking-wide">{EXAM_CONFIG.mapel}</h1>
-                                <p className="text-blue-200 text-sm mt-1">{EXAM_CONFIG.jenis} - KELAS {EXAM_CONFIG.kelas}</p>
-                            </div>
-                            <form className="p-8 space-y-5" onSubmit={(e) => { e.preventDefault(); startExam(false); }}>
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-1">Nama Lengkap</label>
-                                    <input required type="text" className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={userData.nama} onChange={e => setUserData({...userData, nama: e.target.value})} />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-1">Kelas</label>
-                                    <input required type="text" className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={userData.kelas} onChange={e => setUserData({...userData, kelas: e.target.value})} />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-1">Tanggal Ujian</label>
-                                    <input required type="date" className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={userData.tanggal} onChange={e => setUserData({...userData, tanggal: e.target.value})} />
-                                </div>
-                                <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-lg mt-2 transition-colors shadow-lg text-lg">
-                                    Mulai Ujian
-                                </button>
-                            </form>
+              <div className="mt-8 flex-1 flex flex-col gap-3">
+                {q.type === 'mc' && q.options.map((opt, i) => {
+                  const isSelected = answers[q.id] === opt;
+                  return (
+                    <div key={i} onClick={() => handleSelectOption(q.id, opt)} className={`p-4 border rounded-xl cursor-pointer transition ${isSelected ? 'bg-blue-50 border-blue-500':'hover:bg-gray-50'}`}>
+                      <div className="flex items-center gap-3">
+                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${isSelected?'border-blue-500 bg-blue-500':'border-gray-300'}`}>
+                          {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-white"></div>}
                         </div>
+                        <FormattedOption text={opt} />
+                      </div>
                     </div>
-                );
-            }
-
-            if (view === "resume") {
-                return (
-                    <div className="flex items-center justify-center min-h-screen p-4">
-                        <div className="bg-white p-8 rounded-2xl shadow-xl max-w-sm text-center">
-                            <IconAlert />
-                            <h2 className="text-xl font-bold mb-3 text-gray-800">Sesi Ujian Tersimpan Ditemukan!</h2>
-                            <p className="text-gray-600 mb-6 text-sm">Sistem menemukan sesi pengerjaan ujian Anda yang terputus. Apakah Anda ingin melanjutkannya?</p>
-                            <div className="flex flex-col gap-3">
-                                <button onClick={() => startExam(true)} className="bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-lg font-bold shadow-md transition-colors">Lanjutkan Ujian</button>
-                                <button onClick={() => { localStorage.removeItem(EXAM_CONFIG.storageKey); setView("login"); }} className="bg-red-500 hover:bg-red-600 text-white py-2.5 rounded-lg font-bold shadow-md transition-colors">Mulai Ulang (Hapus Progres)</button>
-                            </div>
+                  )
+                })}
+                
+                {q.type === 'matching' && (
+                  <div className="flex flex-col gap-4 mt-4">
+                    {q.pairs.map((pair) => (
+                      <div key={pair.id} className="flex flex-col md:flex-row bg-gray-50 p-4 border rounded-lg gap-4 items-center">
+                        <div className="w-full md:w-1/2">
+                          <FormattedText text={pair.premise} />
                         </div>
-                    </div>
-                );
-            }
-
-            if (view === "finished") {
-                return (
-                    <div className="flex items-center justify-center min-h-screen p-4">
-                        <div className="bg-white p-10 rounded-2xl shadow-xl text-center max-w-md w-full border-t-8 border-green-500">
-                            <div className="mx-auto w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-6 shadow-inner">
-                                <IconCheck />
-                            </div>
-                            <h2 className="text-3xl font-bold text-gray-800 mb-3">Ujian Selesai!</h2>
-                            <p className="text-gray-600 mb-6 text-lg">Jawaban Anda telah berhasil dikirim ke server. Silakan tutup browser ini.</p>
+                        <div className="w-full md:w-1/2">
+                          <select 
+                            className="w-full p-3 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 font-arabic text-lg"
+                            dir={isArabic(answers[q.id]?.[pair.id] || q.options[0]) ? "rtl" : "ltr"}
+                            value={answers[q.id]?.[pair.id] || ''}
+                            onChange={(e) => handleMatchingSelect(q.id, pair.id, e.target.value)}
+                          >
+                            <option value="">-- Pilih Pasangan --</option>
+                            {q.options.map((opt, i) => (
+                              <option key={i} value={opt}>{opt}</option>
+                            ))}
+                          </select>
                         </div>
-                    </div>
-                );
-            }
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {q.type === 'essay' && (
+                  <textarea className="w-full flex-1 p-4 border rounded-xl focus:ring-2 focus:ring-blue-500 min-h-[200px]" value={answers[q.id]||''} onChange={e=>handleInputText(q.id, e.target.value)}></textarea>
+                )}
+              </div>
 
-            // EXAM VIEW
-            const activeQ = questions[activeIdx];
-            return (
-                <div className="flex flex-col h-screen bg-gray-50">
-                    <CustomModal {...modal} />
-                    
-                    {/* Header Navigasi Atas */}
-                    <header className="bg-white shadow-sm px-4 md:px-6 py-3 flex justify-between items-center z-10 shrink-0 border-b">
-                        <div>
-                            <h1 className="text-lg md:text-xl font-bold text-blue-900 uppercase">{EXAM_CONFIG.mapel}</h1>
-                            <p className="text-xs md:text-sm text-gray-500 font-medium">{EXAM_CONFIG.jenis} | KELAS {userData.kelas}</p>
-                        </div>
-                        <div className="flex items-center gap-3 md:gap-5">
-                            <div className="hidden md:flex items-center gap-2 text-sm font-bold text-gray-700 bg-gray-100 px-4 py-1.5 rounded-full border">
-                                <IconUser /> {userData.nama}
-                            </div>
-                            <div className={`flex items-center gap-2 font-mono text-lg font-bold px-4 py-1.5 rounded-lg border shadow-sm ${timeLeft < 300 ? 'bg-red-100 text-red-600 border-red-200 animate-pulse' : 'bg-blue-50 text-blue-800 border-blue-200'}`}>
-                                <IconClock /> {formatTime(timeLeft)}
-                            </div>
-                        </div>
-                    </header>
+              <div className="mt-8 pt-4 border-t flex justify-between">
+                <button onClick={()=>setCurrentIndex(p=>Math.max(0, p-1))} disabled={currentIndex===0} className="px-5 py-2.5 bg-gray-200 rounded font-semibold">&laquo; Sebelumnya</button>
+                {currentIndex === questions.length - 1 ? (
+                  <button onClick={reqSubmit} className="px-5 py-2.5 bg-green-600 text-white rounded font-bold shadow">Selesai & Kumpulkan</button>
+                ) : (
+                  <button onClick={()=>setCurrentIndex(p=>Math.min(questions.length-1, p+1))} className="px-5 py-2.5 bg-blue-600 text-white rounded font-semibold shadow">Selanjutnya &raquo;</button>
+                )}
+              </div>
+            </main>
 
-                    {/* Konten Utama */}
-                    <main className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
-                        {/* Kolom Kiri: Area Soal */}
-                        <div className="flex-1 overflow-y-auto p-4 md:p-8 relative hide-scrollbar">
-                            <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 min-h-full">
-                                <div className="flex items-center justify-between mb-6 pb-4 border-b">
-                                    <h2 className="text-xl font-bold text-gray-800">Soal No. {activeIdx + 1}</h2>
-                                    <span className="text-xs font-semibold px-3 py-1 bg-gray-100 text-gray-500 rounded-full uppercase tracking-wider">{activeQ?.type === 'mc' ? 'Pilihan Ganda' : 'Esai'}</span>
-                                </div>
-                                
-                                <div className="text-lg text-gray-800 leading-relaxed mb-8 whitespace-pre-line font-medium">
-                                    {activeQ?.question}
-                                    {activeQ?.image && (
-                                        <img src={activeQ.image} alt="Ilustrasi Soal" className="mt-5 max-w-full rounded-lg border shadow-sm" />
-                                    )}
-                                </div>
+            <aside className="w-full lg:w-72 bg-white rounded-xl shadow-sm border p-5 h-fit">
+              <h3 className="font-bold text-gray-700 mb-4 border-b pb-2">Navigasi</h3>
+              <div className="grid grid-cols-5 gap-2">
+                {questions.map((qst, idx) => {
+                  let isAns = false;
+                  if (qst.type === 'mc' || qst.type === 'short_answer') isAns = !!answers[qst.id];
+                  else if (qst.type === 'essay') isAns = !!(answers[qst.id] && answers[qst.id].trim());
+                  else if (qst.type === 'matching') {
+                    const savedPair = answers[qst.id];
+                    isAns = savedPair && Object.keys(savedPair).length === qst.pairs.length && Object.values(savedPair).every(v=>v!=="");
+                  }
+                  return (
+                    <button key={qst.id} onClick={()=>setCurrentIndex(idx)}
+                      className={`h-10 rounded font-bold text-sm transition ${currentIndex===idx?'ring-2 ring-blue-600':''} ${isAns?'bg-green-500 text-white':'bg-white border hover:bg-gray-100'}`}
+                    >{idx + 1}</button>
+                  );
+                })}
+              </div>
+            </aside>
+            
+          </div>
+        </div>
+      );
+    };
 
-                                <div className="space-y-4">
-                                    {activeQ?.type === 'mc' ? (
-                                        activeQ.options.map((opt, i) => (
-                                            <label key={i} className={`flex items-start gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 ${answers[activeQ.id] === opt.text ? 'bg-blue-50 border-blue-500 shadow-sm' : 'hover:bg-gray-50 border-gray-200'}`}>
-                                                <input type="radio" name={`q_${activeQ.id}`} className="mt-1 w-5 h-5 text-blue-600 focus:ring-blue-500 border-gray-300"
-                                                    checked={answers[activeQ.id] === opt.text}
-                                                    onChange={() => setAnswers(prev => ({...prev, [activeQ.id]: opt.text}))}
-                                                />
-                                                <span className="text-gray-700 leading-relaxed font-medium">{opt.text}</span>
-                                            </label>
-                                        ))
-                                    ) : (
-                                        <div>
-                                            <textarea rows="5" placeholder="Ketik jawaban esai/uraian Anda di sini..." 
-                                                className="w-full px-4 py-4 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-lg transition-all resize-none shadow-sm"
-                                                value={answers[activeQ.id] || ""}
-                                                onChange={(e) => setAnswers(prev => ({...prev, [activeQ.id]: e.target.value}))}
-                                            />
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Navigasi Bawah Area Soal */}
-                                <div className="mt-10 pt-6 border-t border-gray-100 flex justify-between items-center">
-                                    <button onClick={() => setActiveIdx(i => Math.max(0, i - 1))} disabled={activeIdx === 0}
-                                        className="px-6 py-2.5 rounded-xl font-bold text-gray-700 bg-gray-200 hover:bg-gray-300 disabled:opacity-40 transition-colors">
-                                        &larr; Sebelumnya
-                                    </button>
-                                    
-                                    {activeIdx === questions.length - 1 ? (
-                                        <button onClick={manualSubmitConfirm} className="px-8 py-2.5 rounded-xl font-bold text-white bg-green-600 hover:bg-green-700 shadow-lg transition-colors">
-                                            Selesai & Kumpulkan
-                                        </button>
-                                    ) : (
-                                        <button onClick={() => setActiveIdx(i => Math.min(questions.length - 1, i + 1))}
-                                            className="px-6 py-2.5 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-md transition-colors">
-                                            Selanjutnya &rarr;
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Kolom Kanan: Kotak Navigasi Nomor */}
-                        <div className="w-full md:w-80 bg-white border-l border-gray-200 shadow-[-4px_0_15px_-10px_rgba(0,0,0,0.1)] flex flex-col shrink-0 z-10">
-                            <div className="p-4 bg-gray-50 border-b font-bold text-gray-700 text-center uppercase tracking-wider text-sm">
-                                Navigasi Soal
-                            </div>
-                            <div className="p-5 overflow-y-auto hide-scrollbar flex-1">
-                                <div className="grid grid-cols-5 gap-3">
-                                    {questions.map((q, i) => {
-                                        const isAnswered = answers[q.id] && answers[q.id].trim() !== "";
-                                        const isActive = i === activeIdx;
-                                        return (
-                                            <button key={q.id} onClick={() => setActiveIdx(i)}
-                                                className={`
-                                                    h-11 rounded-lg font-bold text-sm transition-all relative border-2 flex items-center justify-center shadow-sm
-                                                    ${isActive ? 'ring-4 ring-blue-200 border-blue-500 z-10 scale-105' : 'border-gray-200 hover:border-gray-300'}
-                                                    ${isAnswered ? 'bg-green-500 text-white border-green-600' : 'bg-white text-gray-600'}
-                                                `}>
-                                                {i + 1}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                                <div className="mt-8 pt-6 border-t flex flex-col gap-2 text-xs font-semibold text-gray-500">
-                                    <div className="flex items-center gap-2"><span className="w-4 h-4 bg-green-500 rounded block border border-green-600"></span> Sudah Dijawab</div>
-                                    <div className="flex items-center gap-2"><span className="w-4 h-4 bg-white rounded block border-2 border-gray-200"></span> Belum Dijawab</div>
-                                </div>
-                            </div>
-                        </div>
-                    </main>
-                </div>
-            );
-        };
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
 </body>
 </html>
